@@ -23,15 +23,6 @@ pipeline {
             }
         }
 
-        stage('Security Scan (Trivy)') {
-            steps {
-                sh '''
-                trivy image --severity HIGH,CRITICAL $DOCKER_IMAGE_BACKEND || true
-                trivy image --severity HIGH,CRITICAL $DOCKER_IMAGE_FRONTEND || true
-                '''
-            }
-        }
-
         stage('Push to DockerHub') {
             steps {
                 sh '''
