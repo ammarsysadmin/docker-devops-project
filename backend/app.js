@@ -20,6 +20,6 @@ app.get("/metrics", async (req, res) => {
 });
 
 // ✅ IMPORTANT for Docker
-app.listen(5000, "0.0.0.0", () => {
-    console.log("Server running on port 5000");
+app.listen(5001, '0.0.0.0', () => {
+  console.log("Server running on port 5001");
 });

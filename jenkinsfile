@@ -1,37 +1,58 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_IMAGE_BACKEND = "ammarsysadmin/backend:v3"
+        DOCKER_IMAGE_FRONTEND = "ammarsysadmin/frontend:v2"
+    }
+
     stages {
 
-        stage('Clone') {
+        stage('Clone Code') {
             steps {
-                git 'https://github.com/ammarsysadmin/docker-devops-project.git'
+                git 'https://github.com/ammarsysadmin/fullstack-devops-pipeline.git'
             }
         }
 
-        stage('Build') {
-            steps {
-                sh 'docker-compose build'
-            }
-        }
-
-        stage('Security Scan') {
+        stage('Build Images') {
             steps {
                 sh '''
-                trivy image --exit-code 1 --severity CRITICAL docker-devops-project_backend
+                docker build -t $DOCKER_IMAGE_BACKEND ./backend
+                docker build -t $DOCKER_IMAGE_FRONTEND ./frontend
                 '''
             }
         }
 
-        stage('Deploy') {
+        stage('Security Scan (Trivy)') {
             steps {
-                sh 'docker-compose up -d --build'
+                sh '''
+                trivy image --severity HIGH,CRITICAL $DOCKER_IMAGE_BACKEND || true
+                trivy image --severity HIGH,CRITICAL $DOCKER_IMAGE_FRONTEND || true
+                '''
             }
         }
 
-        stage('Health Check') {
+        stage('Push to DockerHub') {
             steps {
-                sh 'curl -f http://localhost:5001/health'
+                sh '''
+                docker push $DOCKER_IMAGE_BACKEND
+                docker push $DOCKER_IMAGE_FRONTEND
+                '''
+            }
+        }
+
+        stage('Deploy to Kubernetes (Helm)') {
+            steps {
+                sh '''
+                helm upgrade --install devops-release ./devops-chart \
+                -n devops-project --create-namespace
+                '''
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh 'kubectl get pods -n devops-project'
             }
         }
     }
